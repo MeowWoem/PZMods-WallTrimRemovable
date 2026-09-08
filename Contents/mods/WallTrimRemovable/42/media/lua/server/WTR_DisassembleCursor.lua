@@ -69,7 +69,6 @@ function DisassembleCursor:walkTo(x, y, z)
 	return true;
 end
 
-
 function DisassembleCursor:isValid(square)
 	return self:isValidArea(square:getX(), square:getY(), square:getZ());
 end
@@ -77,24 +76,46 @@ end
 function DisassembleCursor:isValidArea(x, y, z, renderMode)
 	renderMode = renderMode or false;
 	local playerInv = self.character:getInventory();
+
     if(self.tool and not playerInv:contains(self.tool)) then return false; end
     if(self.tool2 and not playerInv:contains(self.tool2)) then return false; end
 	local sq = getCell():getGridSquare(x, y, z);
 	if not sq then return false; end
 
-
-
     self.disassemblables = WTR.getDisassemblables(sq:getObjects());
 
-    local count = 0;
-    
-    for _ in pairs(self.disassemblables) do
+    local disassemblable = nil;
+    local data = nil;
+    local tool = nil;
+    local tool2 = nil;
+    local key = nil;
+
+    local count = 1;
+    for k, v in pairs(self.disassemblables) do
+
+        if(count == self.objIndex) then
+            disassemblable = v;
+            data =  WTR.DISASSEMBLABLE_SPRITES[k];
+            if(data.toolRequired) then
+                tool = self.character:getInventory():getFirstEvalArgRecurse(WTR.predicateRequiredTool, data.toolRequired);
+            end
+            if(data.toolRequired2) then
+                tool2 = self.character:getInventory():getFirstEvalArgRecurse(WTR.predicateRequiredTool, data.toolRequired2);
+            end
+            key = k;
+        end
+
         count = count + 1;
     end
-	
+
+    local hasToolRequirement = true;
+    local hasTool2Requirement = true;
+    if(data and data.toolRequired and not tool) then hasToolRequirement = false; end
+    if(data and data.toolRequired2 and not tool2) then hasTool2Requirement = false; end
+
 	local isCouldSee = sq:isCouldSee(self.character:getPlayerNum());
 
-	return count > 0 and isCouldSee;
+	return hasToolRequirement and hasTool2Requirement and count - 1 > 0 and isCouldSee;
 end
 
 function DisassembleCursor:isRunningAction()
@@ -131,7 +152,7 @@ function DisassembleCursor:render(x, y, z, square)
     if(disassemblable and self:isValid(square)) then
         local aSprite = disassemblable.object:getAttachedAnimSprite():get(index - 1);
         local spriteRender = aSprite:getParentSprite();
-		local r,g,b,a = 1.0,0.0,0.0,0.8;
+		local r,g,b,a = bhc:getR(), bhc:getG(), bhc:getB(), 0.8;
 		spriteRender:RenderGhostTileColor(x, y, z, r, g, b, a);
     end
 

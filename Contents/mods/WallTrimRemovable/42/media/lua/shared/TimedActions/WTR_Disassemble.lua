@@ -12,7 +12,12 @@ WTR.Disassemble = Disassemble;
 
 
 function Disassemble:isValid()
-    return true;
+    
+    local hasToolRequirement = true;
+    local hasTool2Requirement = true;
+    if(self.data.toolRequired and not self.tool) then hasToolRequirement = false; end
+    if(self.data.toolRequired2 and not self.tool2) then hasTool2Requirement = false; end
+    return hasToolRequirement and hasTool2Requirement;
 end
 
 function Disassemble:update()
