@@ -4,6 +4,9 @@
 
 local ContextMenu = {};
 
+local ghc = getCore():getGoodHighlitedColor();
+local bhc = getCore():getBadHighlitedColor();
+
 local function onDisassemble(playerObj, worldObjects, disassemblable, data, tool, tool2, key)
 
     if(tool) then
@@ -77,7 +80,69 @@ function ContextMenu.createMenu(player, context, worldObjects, test)
             tool2 = playerInv:getFirstEvalArgRecurse(WTR.predicateRequiredTool, data.toolRequired2);
         end
 
-        local option = disassembleSubMenu:addOption("WALL TRIM", playerObj, onDisassemble, worldObjects, disassemblable, data, tool, tool2, key);
+        local option = disassembleSubMenu:addOption(data.name, playerObj, onDisassemble, worldObjects, disassemblable, data, tool, tool2, key);
+        local tooltipFont = ISToolTip.GetFont();
+        local toolTip = ISToolTip:new();
+        toolTip:initialise();
+        toolTip:setVisible(false);
+
+        local lines = {
+            {
+                key = "name",
+                txt = getText("IGUI_Name")
+            },
+            {
+                key = "toolRequired",
+                txt = getText("IGUI_Tool")
+            },
+        };
+
+        local col1Width = 0;
+
+        for i, v in ipairs(lines) do
+            local textWid = getTextManager():MeasureStringX(tooltipFont, string.format("%s%s ", v.txt, getText("IGUI_WTR_Colon")));
+            col1Width = math.max(col1Width, textWid + 10);
+        end
+
+        for i, v in ipairs(lines) do
+            local text = "";
+            text = string.format("%s <RGB:1,1,1> %s%s ", text, v.txt, getText("IGUI_WTR_Colon"));
+            if((v.key == "toolRequired" or v.key == "toolRequired2") and instanceof(data[v.key], "ItemTag")) then
+                local itemsWithTag = getScriptManager():getItemsTag(data[v.key]);
+                local r, g, b = ghc:getR(), ghc:getG(), ghc:getB();
+                if(playerInv:getCountTag(data[v.key]) == 0) then
+                    r, g, b = bhc:getR(), bhc:getG(), bhc:getB();
+                end
+                local alreadyInList = {};
+                local offset = 0;
+                for i = 1, itemsWithTag:size() do
+                    local item = itemsWithTag:get(i - 1);
+                    if(not alreadyInList[item:getDisplayName()]) then
+                        offset = offset + 1;
+                        alreadyInList[item:getDisplayName()] = true;
+                    end
+                end
+                alreadyInList = {};
+                for i = 1, itemsWithTag:size() do
+                    local item = itemsWithTag:get(i - 1);
+                    if(not alreadyInList[item:getDisplayName()]) then
+                        text = string.format("%s <SETX:%d> <INDENT:%d> <RGB:%.2f,%.2f,%.2f>%s", text, col1Width, col1Width, r, g, b, item:getDisplayName());
+                        if(i < itemsWithTag:size() - offset) then
+                            text = text .. " <LINE> ";
+                        end
+                        alreadyInList[item:getDisplayName()] = true;
+                    end
+                end
+            else
+                text = string.format("%s <SETX:%d> <INDENT:%d>%s", text, col1Width, col1Width, data[v.key]);
+            end
+            
+            text = text .. " <LINE> <INDENT:0> ";
+            toolTip.description = toolTip.description .. text;
+        end
+    
+        toolTip:setTexture(key);
+        option.toolTip = toolTip;
 
         if(not tool or (data.toolRequired2 and not tool2)) then
             option.notAvailable = true;
