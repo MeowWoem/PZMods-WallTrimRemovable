@@ -95,6 +95,10 @@ function ContextMenu.createMenu(player, context, worldObjects, test)
                 key = "toolRequired",
                 txt = getText("IGUI_Tool")
             },
+            {
+                key = "toolRequired2",
+                txt = getText("IGUI_Tool")
+            },
         };
 
         local col1Width = 0;
@@ -106,8 +110,11 @@ function ContextMenu.createMenu(player, context, worldObjects, test)
 
         for i, v in ipairs(lines) do
             local text = "";
-            text = string.format("%s <RGB:1,1,1> %s%s ", text, v.txt, getText("IGUI_WTR_Colon"));
-            if((v.key == "toolRequired" or v.key == "toolRequired2") and instanceof(data[v.key], "ItemTag")) then
+            if(v.key ~= "toolRequired2" or (v.key == "toolRequired2" and data[v.key])) then
+                text = string.format("%s <RGB:1,1,1> %s%s ", text, v.txt, getText("IGUI_WTR_Colon"));
+            end
+            if((v.key == "toolRequired" or (v.key == "toolRequired2" and data[v.key])) and instanceof(data[v.key], "ItemTag")) then
+               
                 local itemsWithTag = getScriptManager():getItemsTag(data[v.key]);
                 local r, g, b = ghc:getR(), ghc:getG(), ghc:getB();
                 if(playerInv:getCountTag(data[v.key]) == 0) then
@@ -118,26 +125,31 @@ function ContextMenu.createMenu(player, context, worldObjects, test)
                 for i = 1, itemsWithTag:size() do
                     local item = itemsWithTag:get(i - 1);
                     if(not alreadyInList[item:getDisplayName()]) then
-                        offset = offset + 1;
                         alreadyInList[item:getDisplayName()] = true;
+                    else
+                        offset = offset + 1;
                     end
                 end
                 alreadyInList = {};
+                local j = 1;
                 for i = 1, itemsWithTag:size() do
                     local item = itemsWithTag:get(i - 1);
                     if(not alreadyInList[item:getDisplayName()]) then
                         text = string.format("%s <SETX:%d> <INDENT:%d> <RGB:%.2f,%.2f,%.2f>%s", text, col1Width, col1Width, r, g, b, item:getDisplayName());
-                        if(i < itemsWithTag:size() - offset) then
+                        if(j < itemsWithTag:size() - offset) then
                             text = text .. " <LINE> ";
                         end
                         alreadyInList[item:getDisplayName()] = true;
+                        j = j + 1;
                     end
                 end
-            else
+            elseif(v.key ~= "toolRequired2") then
                 text = string.format("%s <SETX:%d> <INDENT:%d>%s", text, col1Width, col1Width, data[v.key]);
             end
+            if(v.key ~= "toolRequired2" or (v.key == "toolRequired2" and data[v.key])) then
+                text = text .. " <LINE> <INDENT:0> ";
+            end
             
-            text = text .. " <LINE> <INDENT:0> ";
             toolTip.description = toolTip.description .. text;
         end
     
