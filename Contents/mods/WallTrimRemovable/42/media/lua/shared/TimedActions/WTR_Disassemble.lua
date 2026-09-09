@@ -76,7 +76,12 @@ end
 
 function Disassemble:complete()
 
-    -- self.isoObj:RemoveAttachedAnim(self.disassemblable.index - 1);
+    --self.isoObj:RemoveAttachedAnim(self.disassemblable.index - 1);
+
+    for item, qty in pairs(self.data.results) do
+        print(item);
+        self.sq:SpawnWorldInventoryItem(item, ZombRand(0.1, 0.5), ZombRand(0.1, 0.5), 0, qty);
+    end
 
     -- TODO: send server command with square coordinates and disassemblable key and index to all client
     -- then do a RemoveAttachedAnim on clients
