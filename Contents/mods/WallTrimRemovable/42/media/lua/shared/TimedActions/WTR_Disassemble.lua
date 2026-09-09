@@ -82,6 +82,16 @@ function WTRDisassemble:complete()
     -- TODO: send server command with square coordinates and disassemblable key and index to all client
     -- then do a RemoveAttachedAnim on clients
 
+    sendServerCommand("WTRDisassemble", "complete", {
+        disassemblable = {
+            index = self.disassemblable.index,
+            objIndex = self.disassemblable.objIndex,
+        },
+        x = self.sq:getX(),
+        y = self.sq:getY(),
+        z = self.sq:getZ(),
+    });
+
     if(self.enableCursor) then
         local bo = WTRDisassembleCursor:new(self.character, self.tool, self.tool2);
 	    getCell():setDrag(bo, bo.player);
@@ -128,3 +138,25 @@ function WTRDisassemble:new(character, disassemblable, data, sq, tool, tool2, ke
 
     return o;
 end
+
+Events.OnServerCommand.Add(function(module, command, args)
+    if(module == "WTRDisassemble" and command == "complete") then
+
+        local sq = getSquare(args.x, args.y, args.z);
+        local isoObj = nil;
+        local disassemblables = WTR.getDisassemblables(sq:getObjects());
+        local i = 1;
+        for k, v in pairs(disassemblables) do
+            if(i == args.disassemblable.objIndex) then
+                isoObj = v.object;
+                break
+            end
+            i = i + 1;
+        end
+
+        if(isoObj) then
+            isoObj:RemoveAttachedAnim(args.disassemblable.index - 1);
+        end
+        
+    end
+end);
