@@ -19,7 +19,7 @@ local function onDisassemble(playerObj, worldObjects, disassemblable, data, tool
     local square = disassemblable.object:getSquare();
     
     ISTimedActionQueue.add(ISWalkToTimedAction:new(playerObj, square));
-    ISTimedActionQueue.add(WTR.Disassemble:new(playerObj, disassemblable, data, square, tool, tool2, key, true));
+    ISTimedActionQueue.add(WTRDisassemble:new(playerObj, disassemblable, data, square, tool, tool2, key, true));
 end
 
 local function buildTooltipDescription(data, playerInv, col1Width)
@@ -126,7 +126,7 @@ function ContextMenu.createMenu(player, context, worldObjects, test)
 
         local tool = data.toolRequired and playerInv:getFirstEvalArgRecurse(WTR.predicateRequiredTool, data.toolRequired) or nil;
         local tool2 = data.toolRequired2 and playerInv:getFirstEvalArgRecurse(WTR.predicateRequiredTool, data.toolRequired2) or nil;
-
+        disassemblable.objIndex = index;
         local option = disassembleSubMenu:addOption(data.name, playerObj, onDisassemble, worldObjects, disassemblable, data, tool, tool2, key);
         
         local toolTip = ISToolTip:new();

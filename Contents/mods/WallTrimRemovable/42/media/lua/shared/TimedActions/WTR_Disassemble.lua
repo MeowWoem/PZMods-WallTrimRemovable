@@ -3,15 +3,12 @@
 --***********************************************************
 
 require "TimedActions/ISBaseTimedAction";
-require "MWSGrassGrowingShared";
+require "WTR_Data";
+require "WTR_Utils";
 
-local Disassemble = ISBaseTimedAction:derive("Disassemble");
+WTRDisassemble = ISBaseTimedAction:derive("WTRDisassemble");
 
-WTR = WTR or {};
-WTR.Disassemble = Disassemble;
-
-
-function Disassemble:isValid()
+function WTRDisassemble:isValid()
     
     local hasToolRequirement = true;
     local hasTool2Requirement = true;
@@ -20,11 +17,11 @@ function Disassemble:isValid()
     return hasToolRequirement and hasTool2Requirement;
 end
 
-function Disassemble:update()
+function WTRDisassemble:update()
     --self.character:setMetabolicTarget(Metabolics.LightDomestic);
 end
 
-function Disassemble:start()
+function WTRDisassemble:start()
 
     if(self.tool) then
         self.tool:setJobType(getText("ContextMenu_Disassemble"));
@@ -42,12 +39,12 @@ function Disassemble:start()
 
 end
 
-function Disassemble:waitToStart()
+function WTRDisassemble:waitToStart()
 	self.character:faceThisObject(self.isoObj);
 	return self.character:shouldBeTurning();
 end
 
-function Disassemble:stop()
+function WTRDisassemble:stop()
     if(self.tool) then
         self.tool:setJobDelta(0.0);
     end
@@ -58,7 +55,7 @@ function Disassemble:stop()
     ISBaseTimedAction.stop(self);
 end
 
-function Disassemble:perform()
+function WTRDisassemble:perform()
     if(self.tool) then
         self.tool:setJobDelta(0.0);
     end
@@ -74,12 +71,11 @@ function Disassemble:perform()
     ISBaseTimedAction.perform(self);
 end
 
-function Disassemble:complete()
+function WTRDisassemble:complete()
 
-    --self.isoObj:RemoveAttachedAnim(self.disassemblable.index - 1);
+    self.isoObj:RemoveAttachedAnim(self.disassemblable.index - 1);
 
     for item, qty in pairs(self.data.results) do
-        print(item);
         self.sq:SpawnWorldInventoryItem(item, ZombRand(0.1, 0.5), ZombRand(0.1, 0.5), 0, qty);
     end
 
@@ -87,13 +83,13 @@ function Disassemble:complete()
     -- then do a RemoveAttachedAnim on clients
 
     if(self.enableCursor) then
-        local bo = WTR.DisassembleCursor:new(self.character, self.tool, self.tool2);
+        local bo = WTRDisassembleCursor:new(self.character, self.tool, self.tool2);
 	    getCell():setDrag(bo, bo.player);
     end
     return true;
 end
 
-function Disassemble:getDuration()
+function WTRDisassemble:getDuration()
     if self.character:isTimedActionInstant() then
         return 1;
     end
@@ -101,12 +97,23 @@ function Disassemble:getDuration()
     return self.data.duration;
 end
 
-function Disassemble:new(character, disassemblable, data, sq, tool, tool2, key, enableCursor)
-
+-- TODO: Remove index arg
+function WTRDisassemble:new(character, disassemblable, data, sq, tool, tool2, key, enableCursor)
     if(enableCursor == nil) then enableCursor = false; end
 
-    local o = ISBaseTimedAction.new(self, character);
+    if(not disassemblable.object) then
+        local disassemblables = WTR.getDisassemblables(sq:getObjects());
+        local i = 1;
+        for k, v in pairs(disassemblables) do
+            if(i == disassemblable.objIndex) then
+                disassemblable.object = v.object;
+                break
+            end
+            i = i + 1;
+        end
+    end
 
+    local o = ISBaseTimedAction.new(self, character);
     o.disassemblable = disassemblable;
     o.isoObj = disassemblable.object;
     o.character = character;

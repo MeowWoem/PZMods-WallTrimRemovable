@@ -4,16 +4,13 @@
 
 require "BuildingObjects/ISBuildingObject";
 
-local DisassembleCursor = ISBuildingObject:derive("DisassembleCursor");
-
-WTR = WTR or {};
-WTR.DisassembleCursor = DisassembleCursor;
+WTRDisassembleCursor = ISBuildingObject:derive("WTRDisassembleCursor");
 
 local ghc = getCore():getGoodHighlitedColor();
 local bhc = getCore():getBadHighlitedColor();
 
 
-function DisassembleCursor:create(x, y, z, north, sprite)
+function WTRDisassembleCursor:create(x, y, z, north, sprite)
 	local sq = getSquare(x, y, z);
 	self:walkTo(x, y, z);
 
@@ -31,11 +28,11 @@ function DisassembleCursor:create(x, y, z, north, sprite)
         if(res.data.toolRequired2) then
             ISInventoryPaneContextMenu.equipWeapon(res.tool2, false, false, self.character:getPlayerNum());
         end
-        ISTimedActionQueue.add(WTR.Disassemble:new(self.character, res.disassemblable, res.data, sq, res.tool, res.tool2, res.key));
+        ISTimedActionQueue.add(WTRDisassemble:new(self.character, res.disassemblable, nil, res.data, sq, res.tool, res.tool2, res.key));
     end
 end
 
-function DisassembleCursor:walkTo(x, y, z)
+function WTRDisassembleCursor:walkTo(x, y, z)
 	local playerObj = self.character;
 	local sq = getSquare(x, y, z);
     if playerObj:getCurrentSquare() == sq then
@@ -46,11 +43,11 @@ function DisassembleCursor:walkTo(x, y, z)
 	return true;
 end
 
-function DisassembleCursor:isValid(square)
+function WTRDisassembleCursor:isValid(square)
 	return self:isValidArea(square:getX(), square:getY(), square:getZ());
 end
 
-function DisassembleCursor:isValidArea(x, y, z, renderMode)
+function WTRDisassembleCursor:isValidArea(x, y, z, renderMode)
 	renderMode = renderMode or false;
 	local playerInv = self.character:getInventory();
 
@@ -82,12 +79,12 @@ function DisassembleCursor:isValidArea(x, y, z, renderMode)
 	return hasToolRequirement and hasTool2Requirement and res.total > 0 and isCouldSee;
 end
 
-function DisassembleCursor:isRunningAction()
+function WTRDisassembleCursor:isRunningAction()
     local actionQueue = ISTimedActionQueue.getTimedActionQueue(self.character);
     return actionQueue and actionQueue.queue and actionQueue.queue[1];
 end
 
-function DisassembleCursor:render(x, y, z, square)
+function WTRDisassembleCursor:render(x, y, z, square)
 	if self:isRunningAction() then return; end
 
     local res = WTR.getDisassemblableFromTable(self.character, self.disassemblables, self.objIndex, true);
@@ -106,29 +103,29 @@ function DisassembleCursor:render(x, y, z, square)
     
 end
 
-function DisassembleCursor:onJoypadPressButton(joypadIndex, joypadData, button)
+function WTRDisassembleCursor:onJoypadPressButton(joypadIndex, joypadData, button)
 	if button == Joypad.AButton or button == Joypad.BButton then
 		return ISBuildingObject.onJoypadPressButton(self, joypadIndex, joypadData, button);
 	end
 end
 
-function DisassembleCursor:getAPrompt()
+function WTRDisassembleCursor:getAPrompt()
 	return getText("ContextMenu_Disassemble");
 end
 
-function DisassembleCursor:getYPrompt()
+function WTRDisassembleCursor:getYPrompt()
 	return nil;
 end
 
-function DisassembleCursor:getLBPrompt()
+function WTRDisassembleCursor:getLBPrompt()
 	return nil;
 end
 
-function DisassembleCursor:getRBPrompt()
+function WTRDisassembleCursor:getRBPrompt()
 	return nil;
 end
 
-function DisassembleCursor:rotateKey(key)
+function WTRDisassembleCursor:rotateKey(key)
 	if getCore():isKey("Rotate building", key) then
 		self.objIndex = self.objIndex - 1;
 		if self.objIndex == 0 then
@@ -137,7 +134,7 @@ function DisassembleCursor:rotateKey(key)
 	end
 end
 
-function DisassembleCursor:new(character, tool, tool2)
+function WTRDisassembleCursor:new(character, tool, tool2)
 	local o = {};
 	setmetatable(o, self);
 	self.__index = self;
