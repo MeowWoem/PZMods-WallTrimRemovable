@@ -376,17 +376,9 @@ WTR.DISASSEMBLABLE_SPRITES = {
     ----------------------------------
     ["walls_interior_detailing_01_12"] = buildData(data.WallTrimBase, { -- Wall Trim - Brown - Door
         name = names.wallTrimDecoWhite,
-        results = {
-            ["Base.UnusableWood"] = 2,
-            ["Base.Nails"] = 2,
-        },
     }),
     ["walls_interior_detailing_01_13"] = buildData(data.WallTrimBase, { -- Wall Trim - Brown - Door
         name = names.wallTrimDecoWhite,
-        results = {
-            ["Base.UnusableWood"] = 2,
-            ["Base.Nails"] = 2,
-        },
     }),
     ["walls_interior_detailing_01_10"] = buildData(data.WallTrimBase, { -- Wall Trim + Decoration - White
         name = names.wallTrimDecoWhite,
