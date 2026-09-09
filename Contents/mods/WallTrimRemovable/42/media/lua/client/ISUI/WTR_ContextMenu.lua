@@ -4,11 +4,10 @@
 
 local ContextMenu = {};
 
-local ghc = getCore():getGoodHighlitedColor();
-local bhc = getCore():getBadHighlitedColor();
+local goodHighlightColor = getCore():getGoodHighlitedColor();
+local badHighlightColor = getCore():getBadHighlitedColor();
 
 local function onDisassemble(playerObj, worldObjects, disassemblable, data, tool, tool2, key)
-
     if(tool) then
         ISInventoryPaneContextMenu.equipWeapon(tool, true, not tool2, playerObj:getPlayerNum());
     end
@@ -17,148 +16,144 @@ local function onDisassemble(playerObj, worldObjects, disassemblable, data, tool
         ISInventoryPaneContextMenu.equipWeapon(tool2, false, false, playerObj:getPlayerNum());
     end
 
-    local sq = disassemblable.object:getSquare();
+    local square = disassemblable.object:getSquare();
     
-    ISTimedActionQueue.add(ISWalkToTimedAction:new(playerObj, sq));
-	ISTimedActionQueue.add(WTR.Disassemble:new(playerObj, disassemblable, data, sq, tool, tool2, key, true));
-
+    ISTimedActionQueue.add(ISWalkToTimedAction:new(playerObj, square));
+    ISTimedActionQueue.add(WTR.Disassemble:new(playerObj, disassemblable, data, square, tool, tool2, key, true));
 end
+
+local function buildTooltipDescription(data, playerInv, col1Width)
+    local description = "";
+
+    local lines = {
+        { key = "name", txt = getText("IGUI_Name") },
+        { key = "toolRequired", txt = getText("IGUI_Tool") },
+        { key = "toolRequired2", txt = getText("IGUI_Tool") },
+    };
+
+    for _, line in ipairs(lines) do
+        local toolData = data[line.key];
+        
+        if(line.key ~= "toolRequired2" or toolData) then
+            local text = string.format(" <RGB:1,1,1> %s%s ", line.txt, getText("IGUI_WTR_Colon"));
+
+            if((line.key == "toolRequired" or line.key == "toolRequired2") and instanceof(toolData, "ItemTag")) then
+                local itemsWithTag = getScriptManager():getItemsTag(toolData);
+                local hasTool = playerInv:getCountTag(toolData) > 0;
+                local color = hasTool and goodHighlightColor or badHighlightColor;
+                local r, g, b = color:getR(), color:getG(), color:getB();
+
+                local uniqueNames = {};
+                local nameList = {};
+
+                for i = 0, itemsWithTag:size() - 1 do
+                    local itemName = itemsWithTag:get(i):getDisplayName();
+                    if(not uniqueNames[itemName]) then
+                        uniqueNames[itemName] = true;
+                        table.insert(nameList, string.format("<SETX:%d> <INDENT:%d> <RGB:%.2f,%.2f,%.2f>%s", col1Width, col1Width, r, g, b, itemName));
+                    end
+                end
+
+                text = text .. table.concat(nameList, " <LINE> ");
+            elseif(line.key ~= "toolRequired2") then
+                text = string.format("%s <SETX:%d> <INDENT:%d>%s", text, col1Width, col1Width, tostring(toolData));
+            end
+
+            description = description .. text .. " <LINE> <INDENT:0> ";
+        end
+    end
+
+    return description;
+end
+
+local currentHLDis = nil;
+local currentHLSq = nil;
 
 function ContextMenu.createMenu(player, context, worldObjects, test)
     local playerObj = getSpecificPlayer(player);
+    if(playerObj:isAsleep()) then return; end
+
     local playerInv = playerObj:getInventory();
-    if playerObj:isAsleep() then return; end
 
     local zoom = getCore():getZoom(player);
-	local wz = playerObj:getZ();
-	local wx = IsoUtils.XToIso(getMouseX() * zoom, getMouseY() * zoom, wz);
-	local wy = IsoUtils.YToIso(getMouseX() * zoom, getMouseY() * zoom, wz);
+    local wz = playerObj:getZ();
+    local wx = IsoUtils.XToIso(getMouseX() * zoom, getMouseY() * zoom, wz);
+    local wy = IsoUtils.YToIso(getMouseX() * zoom, getMouseY() * zoom, wz);
 
-	local square = getCell():getGridSquare(math.floor(wx), math.floor(wy), wz);
-
+    local square = getCell():getGridSquare(math.floor(wx), math.floor(wy), wz);
+    if(not square) then return; end
 
     local disassemblables = WTR.getDisassemblables(square:getObjects());
-
-    local count = 0;
     
+    local hasDisassemblables = false;
     for _ in pairs(disassemblables) do
-        count = count + 1;
+        hasDisassemblables = true;
+        break
     end
-
-    if(count == 0) then return; end
+    if(not hasDisassemblables) then return; end
 
     local disassembleText = getText("ContextMenu_Disassemble");
     local disassembleOption = nil;
     local disassembleSubMenu = nil;
 
     for _, opt in ipairs(context.options) do
-        if opt.name == disassembleText then
+        if(opt.name == disassembleText) then
             disassembleOption = opt;
             break
         end
     end
 
-    local disassembleMenuExist = false;
+    local disassembleMenuExist = disassembleOption ~= nil;
 
-    if disassembleOption then
+    if(disassembleMenuExist) then
         disassembleSubMenu = context:getSubMenu(disassembleOption.subOption);
-        disassembleMenuExist = true;
     else
         disassembleSubMenu = ISContextMenu:getNew(context);
     end
 
-    for key, disassemblable in pairs(disassemblables) do
+    local tooltipFont = ISToolTip.GetFont();
+    local col1Width = 0;
+    local labelLines = { getText("IGUI_Name"), getText("IGUI_Tool") };
+    
+    for _, txt in ipairs(labelLines) do
+        local textWid = getTextManager():MeasureStringX(tooltipFont, string.format("%s%s ", txt, getText("IGUI_WTR_Colon")));
+        col1Width = math.max(col1Width, textWid + 10);
+    end
 
+    local index = 1;
+    for key, disassemblable in pairs(disassemblables) do
         local data = WTR.DISASSEMBLABLE_SPRITES[key];
 
-        local tool = nil;
-        local tool2 = nil;
-        if(data.toolRequired) then
-            tool = playerInv:getFirstEvalArgRecurse(WTR.predicateRequiredTool, data.toolRequired);
-        end
-        if(data.toolRequired2) then
-            tool2 = playerInv:getFirstEvalArgRecurse(WTR.predicateRequiredTool, data.toolRequired2);
-        end
+        local tool = data.toolRequired and playerInv:getFirstEvalArgRecurse(WTR.predicateRequiredTool, data.toolRequired) or nil;
+        local tool2 = data.toolRequired2 and playerInv:getFirstEvalArgRecurse(WTR.predicateRequiredTool, data.toolRequired2) or nil;
 
         local option = disassembleSubMenu:addOption(data.name, playerObj, onDisassemble, worldObjects, disassemblable, data, tool, tool2, key);
-        local tooltipFont = ISToolTip.GetFont();
+        
         local toolTip = ISToolTip:new();
         toolTip:initialise();
         toolTip:setVisible(false);
-
-        local lines = {
-            {
-                key = "name",
-                txt = getText("IGUI_Name")
-            },
-            {
-                key = "toolRequired",
-                txt = getText("IGUI_Tool")
-            },
-            {
-                key = "toolRequired2",
-                txt = getText("IGUI_Tool")
-            },
-        };
-
-        local col1Width = 0;
-
-        for i, v in ipairs(lines) do
-            local textWid = getTextManager():MeasureStringX(tooltipFont, string.format("%s%s ", v.txt, getText("IGUI_WTR_Colon")));
-            col1Width = math.max(col1Width, textWid + 10);
-        end
-
-        for i, v in ipairs(lines) do
-            local text = "";
-            if(v.key ~= "toolRequired2" or (v.key == "toolRequired2" and data[v.key])) then
-                text = string.format("%s <RGB:1,1,1> %s%s ", text, v.txt, getText("IGUI_WTR_Colon"));
-            end
-            if((v.key == "toolRequired" or (v.key == "toolRequired2" and data[v.key])) and instanceof(data[v.key], "ItemTag")) then
-               
-                local itemsWithTag = getScriptManager():getItemsTag(data[v.key]);
-                local r, g, b = ghc:getR(), ghc:getG(), ghc:getB();
-                if(playerInv:getCountTag(data[v.key]) == 0) then
-                    r, g, b = bhc:getR(), bhc:getG(), bhc:getB();
-                end
-                local alreadyInList = {};
-                local offset = 0;
-                for i = 1, itemsWithTag:size() do
-                    local item = itemsWithTag:get(i - 1);
-                    if(not alreadyInList[item:getDisplayName()]) then
-                        alreadyInList[item:getDisplayName()] = true;
-                    else
-                        offset = offset + 1;
-                    end
-                end
-                alreadyInList = {};
-                local j = 1;
-                for i = 1, itemsWithTag:size() do
-                    local item = itemsWithTag:get(i - 1);
-                    if(not alreadyInList[item:getDisplayName()]) then
-                        text = string.format("%s <SETX:%d> <INDENT:%d> <RGB:%.2f,%.2f,%.2f>%s", text, col1Width, col1Width, r, g, b, item:getDisplayName());
-                        if(j < itemsWithTag:size() - offset) then
-                            text = text .. " <LINE> ";
-                        end
-                        alreadyInList[item:getDisplayName()] = true;
-                        j = j + 1;
-                    end
-                end
-            elseif(v.key ~= "toolRequired2") then
-                text = string.format("%s <SETX:%d> <INDENT:%d>%s", text, col1Width, col1Width, data[v.key]);
-            end
-            if(v.key ~= "toolRequired2" or (v.key == "toolRequired2" and data[v.key])) then
-                text = text .. " <LINE> <INDENT:0> ";
-            end
-            
-            toolTip.description = toolTip.description .. text;
-        end
-    
         toolTip:setTexture(key);
+        toolTip.description = buildTooltipDescription(data, playerInv, col1Width);
+        
         option.toolTip = toolTip;
+
+        option.onHighlightParams = { disassemblable, badHighlightColor };
+        option.onHighlight = function(_, menu, isHighlighted, object, color)
+            
+            if(currentHLDis ~= disassemblable) then
+                currentHLDis = disassemblable;
+                currentHLSq = square;
+            elseif not isHighlighted then
+                currentHLDis = nil;
+                currentHLSq = nil;
+            end
+        end
 
         if(not tool or (data.toolRequired2 and not tool2)) then
             option.notAvailable = true;
         end
+
+        index = index + 1;
     end
 
     if(not disassembleMenuExist) then
@@ -166,10 +161,16 @@ function ContextMenu.createMenu(player, context, worldObjects, test)
         disassembleOption.iconTexture = getTexture("Item_Hammer");
         context:addSubMenu(disassembleOption, disassembleSubMenu);
     end
+end
 
-
+local function OnPostRender()
+    
+    if(currentHLDis and currentHLSq) then
+        WTR.highlightDisassemblable(currentHLDis, currentHLSq:getX(), currentHLSq:getY(), currentHLSq:getZ());
+    end
 end
 
 Events.OnFillWorldObjectContextMenu.Add(ContextMenu.createMenu);
+Events.OnPostRender.Add(OnPostRender);
 
 return ContextMenu;
