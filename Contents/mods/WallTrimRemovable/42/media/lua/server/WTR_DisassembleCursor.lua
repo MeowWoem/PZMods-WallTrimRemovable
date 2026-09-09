@@ -14,47 +14,24 @@ local bhc = getCore():getBadHighlitedColor();
 
 
 function DisassembleCursor:create(x, y, z, north, sprite)
-	local playerObj = self.character;
 	local sq = getSquare(x, y, z);
 	self:walkTo(x, y, z);
 
-    local disassemblable = nil;
-    local data = nil;
-    local tool = nil;
-    local tool2 = nil;
-    local key = nil;
-
-    local i = 1;
-    for k, v in pairs(self.disassemblables) do
-
-        if(i == self.objIndex) then
-            disassemblable = v;
-            data =  WTR.DISASSEMBLABLE_SPRITES[k];
-            if(data.toolRequired) then
-                tool = playerObj:getInventory():getFirstEvalArgRecurse(WTR.predicateRequiredTool, data.toolRequired);
-            end
-            if(data.toolRequired2) then
-                tool2 = playerObj:getInventory():getFirstEvalArgRecurse(WTR.predicateRequiredTool, data.toolRequired2);
-            end
-            key = k;
-        end
-
-        i = i + 1;
-    end
+    local res = WTR.getDisassemblableFromTable(self.character, self.disassemblables, self.objIndex, true);
 
     local hasToolRequirement = true;
     local hasTool2Requirement = true;
-    if(data.toolRequired and not tool) then hasToolRequirement = false; end
-    if(data.toolRequired2 and not tool2) then hasTool2Requirement = false; end
+    if(res.data.toolRequired and not res.tool) then hasToolRequirement = false; end
+    if(res.data.toolRequired2 and not res.tool2) then hasTool2Requirement = false; end
 
-    if(disassemblable and data and hasToolRequirement and hasTool2Requirement and key) then
-        if(data.toolRequired) then
-            ISInventoryPaneContextMenu.equipWeapon(tool, true, not tool2, playerObj:getPlayerNum());
+    if(res.disassemblable and res.data and hasToolRequirement and hasTool2Requirement and res.key) then
+        if(res.data.toolRequired) then
+            ISInventoryPaneContextMenu.equipWeapon(res.tool, true, not res.tool2, self.character:getPlayerNum());
         end
-        if(data.toolRequired2) then
-            ISInventoryPaneContextMenu.equipWeapon(tool2, false, false, playerObj:getPlayerNum());
+        if(res.data.toolRequired2) then
+            ISInventoryPaneContextMenu.equipWeapon(res.tool2, false, false, self.character:getPlayerNum());
         end
-        ISTimedActionQueue.add(WTR.Disassemble:new(playerObj, disassemblable, data, sq, tool, key));
+        ISTimedActionQueue.add(WTR.Disassemble:new(self.character, res.disassemblable, res.data, sq, res.tool, res.tool2, res.key));
     end
 end
 
@@ -82,40 +59,27 @@ function DisassembleCursor:isValidArea(x, y, z, renderMode)
 	local sq = getCell():getGridSquare(x, y, z);
 	if not sq then return false; end
 
+    if(self.lastSq ~= sq) then
+        self.objIndex = 1;
+        self.maxIndex = 1;
+
+        self.lastSq = sq;
+    end
+
     self.disassemblables = WTR.getDisassemblables(sq:getObjects());
 
-    local disassemblable = nil;
-    local data = nil;
-    local tool = nil;
-    local tool2 = nil;
-    local key = nil;
+    local res = WTR.getDisassemblableFromTable(self.character, self.disassemblables, self.objIndex, false);
 
-    local count = 1;
-    for k, v in pairs(self.disassemblables) do
-
-        if(count == self.objIndex) then
-            disassemblable = v;
-            data =  WTR.DISASSEMBLABLE_SPRITES[k];
-            if(data.toolRequired) then
-                tool = self.character:getInventory():getFirstEvalArgRecurse(WTR.predicateRequiredTool, data.toolRequired);
-            end
-            if(data.toolRequired2) then
-                tool2 = self.character:getInventory():getFirstEvalArgRecurse(WTR.predicateRequiredTool, data.toolRequired2);
-            end
-            key = k;
-        end
-
-        count = count + 1;
-    end
+    self.maxIndex = res.total;
 
     local hasToolRequirement = true;
     local hasTool2Requirement = true;
-    if(data and data.toolRequired and not tool) then hasToolRequirement = false; end
-    if(data and data.toolRequired2 and not tool2) then hasTool2Requirement = false; end
+    if(res.data and res.data.toolRequired and not res.tool) then hasToolRequirement = false; end
+    if(res.data and res.data.toolRequired2 and not res.tool2) then hasTool2Requirement = false; end
 
 	local isCouldSee = sq:isCouldSee(self.character:getPlayerNum());
 
-	return hasToolRequirement and hasTool2Requirement and count - 1 > 0 and isCouldSee;
+	return hasToolRequirement and hasTool2Requirement and res.total > 0 and isCouldSee;
 end
 
 function DisassembleCursor:isRunningAction()
@@ -126,34 +90,10 @@ end
 function DisassembleCursor:render(x, y, z, square)
 	if self:isRunningAction() then return; end
 
-    local disassemblable = nil;
-    local index = nil;
+    local res = WTR.getDisassemblableFromTable(self.character, self.disassemblables, self.objIndex, true);
 
-    local i = 1;
-
-    for k, v in pairs(self.disassemblables) do
-
-        if(i == self.objIndex) then
-            disassemblable = v;
-            index = i;
-            local data =  WTR.DISASSEMBLABLE_SPRITES[k];
-            if(data.toolRequired) then
-                self.tool = self.character:getInventory():getFirstEvalArgRecurse(WTR.predicateRequiredTool, data.toolRequired);
-            end
-            if(data.toolRequired2) then
-                self.tool2 = self.character:getInventory():getFirstEvalArgRecurse(WTR.predicateRequiredTool, data.toolRequired2);
-            end
-            break
-        end
-
-        i = i + 1;
-    end
-
-    if(disassemblable and self:isValid(square)) then
-        local aSprite = disassemblable.object:getAttachedAnimSprite():get(index - 1);
-        local spriteRender = aSprite:getParentSprite();
-		local r,g,b,a = bhc:getR(), bhc:getG(), bhc:getB(), 0.8;
-		spriteRender:RenderGhostTileColor(x, y, z, r, g, b, a);
+    if(res.disassemblable and self:isValid(square)) then
+        WTR.highlightDisassemblable(res.disassemblable, x, y, z);
     end
 
 	local bValid = self:isValidArea(x, y, z, true);
@@ -188,6 +128,15 @@ function DisassembleCursor:getRBPrompt()
 	return nil;
 end
 
+function DisassembleCursor:rotateKey(key)
+	if getCore():isKey("Rotate building", key) then
+		self.objIndex = self.objIndex - 1;
+		if self.objIndex == 0 then
+			self.objIndex = self.maxIndex;
+		end
+	end
+end
+
 function DisassembleCursor:new(character, tool, tool2)
 	local o = {};
 	setmetatable(o, self);
@@ -203,7 +152,10 @@ function DisassembleCursor:new(character, tool, tool2)
 
     o.disassemblables = nil;
     
+    o.lastSq = nil;
+
     o.objIndex = 1;
+    o.maxIndex = 1;
 
 	return o;
 end
