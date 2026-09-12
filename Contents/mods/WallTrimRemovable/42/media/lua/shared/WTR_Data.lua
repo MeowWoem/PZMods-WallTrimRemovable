@@ -244,21 +244,21 @@ WTR.DISASSEMBLABLE_SPRITES = {
     ----------------------------------
     ----- Wall Trim - Gray
     ----------------------------------
-    ["walls_detailing_01_88"] = buildData(data.WallTrimBase, { -- Wall Trim - Gray
+    ["walls_detailing_01_88"] = buildData(data.WallTrimCeramicBase, { -- Wall Trim - Gray
         name = names.wallTrimDecoGray,
     }),
-    ["walls_detailing_01_89"] = buildData(data.WallTrimBase, { -- Wall Trim - Gray
+    ["walls_detailing_01_89"] = buildData(data.WallTrimCeramicBase, { -- Wall Trim - Gray
                 name = names.wallTrimDecoGray,
     }),
-    ["walls_detailing_01_91"] = buildData(data.WallTrimBase, { -- Wall Trim - Gray - Corner Inner
+    ["walls_detailing_01_91"] = buildData(data.WallTrimCeramicBase, { -- Wall Trim - Gray - Corner Inner
         name = names.wallTrimDecoGray,
-        results = multValues(data.WallTrimBase.results, 2),
-        duration = data.WallTrimBase.duration * 2
+        results = multValues(data.WallTrimCeramicBase.results, 2),
+        duration = data.WallTrimCeramicBase.duration * 2
     }),
-    ["walls_detailing_01_90"] = buildData(data.WallTrimBase, { -- Wall Trim - Gray - Corner Outer
+    ["walls_detailing_01_90"] = buildData(data.WallTrimCeramicBase, { -- Wall Trim - Gray - Corner Outer
         name = names.wallTrimDecoGray,
-        results = multValues(data.WallTrimBase.results, 0.5),
-        duration = data.WallTrimBase.duration * 0.5
+        results = multValues(data.WallTrimCeramicBase.results, 0.5),
+        duration = data.WallTrimCeramicBase.duration * 0.5
     }),
 
     ----------------------------------
