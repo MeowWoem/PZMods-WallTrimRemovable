@@ -28,7 +28,7 @@ function WTRDisassembleCursor:create(x, y, z, north, sprite)
         if(res.data.toolRequired2) then
             ISInventoryPaneContextMenu.equipWeapon(res.tool2, false, false, self.character:getPlayerNum());
         end
-        ISTimedActionQueue.add(WTRDisassemble:new(self.character, res.disassemblable, nil, res.data, sq, res.tool, res.tool2, res.key));
+        ISTimedActionQueue.add(WTRDisassemble:new(self.character, res.disassemblable, res.data, sq, res.tool, res.tool2, res.key));
     end
 end
 
